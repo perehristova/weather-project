@@ -10,6 +10,9 @@ export default defineConfig({
     vue(),
     vueDevTools(),
   ],
+
+  base: '/weather-pj/',
+
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
