@@ -11,7 +11,7 @@ export default defineConfig({
     vueDevTools(),
   ],
 
-  base: '/weather-pj/',
+  base: '/weather-project/',
 
   resolve: {
     alias: {
