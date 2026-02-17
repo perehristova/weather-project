@@ -62,7 +62,7 @@
     cities.value = [];
     country.value = '';
     const API_KEY = '684a2a306db928a090319025e7b1a1e0';
-    const URL = `http://api.openweathermap.org/geo/1.0/reverse?lat=${lat.value}&lon=${lon.value}&limit=1&appid=${API_KEY}`;
+    const URL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat.value}&lon=${lon.value}&limit=1&appid=${API_KEY}`;
 
     const response = await fetch (URL);
     const data = await response.json();
