@@ -263,7 +263,7 @@
 
         <div class="container-information glass-container ">
             <div v-if="!hasLocation" class="empty-state">
-                <img src="./assets/images/sad-cloud.svg" alt="Sad Cloud" class="big-sad-cloud" />
+                <img src="./assets/images/sad-cloud.png" alt="Sad Cloud" class="big-sad-cloud" />
                 <p class="status-text">
                     {{ isAutoLoading || isManualLoading ? 'Searching for light...' : errorMessage}}
                 </p>
