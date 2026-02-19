@@ -525,6 +525,14 @@
         max-width: 100%; /* Растягиваем на всю ширину блока */
         width: 100%;
     }
+
+    .weather-temp {
+        font-size: 50px;
+    }
+
+    .weather-desc, .weather-timezone, .status-text {
+        font-size: 11px;
+    }
 }
 </style>
 
