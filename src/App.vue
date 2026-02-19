@@ -263,7 +263,7 @@
 
         <div class="container-information glass-container ">
             <div v-if="!hasLocation" class="empty-state">
-                <img src="./assets/images/biba.png" alt="Sad Sun" class="big-sad-sun" />
+                <img src="./assets/images/sad-cloud.svg" alt="Sad Cloud" class="big-sad-cloud" />
                 <p class="status-text">
                     {{ isAutoLoading || isManualLoading ? 'Searching for light...' : errorMessage}}
                 </p>
@@ -301,7 +301,7 @@
     }
 
 
-    .big-sad-sun {
+    .big-sad-cloud {
         width: 175px;
     }
 
