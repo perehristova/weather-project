@@ -1,138 +1,208 @@
 <script setup>
   // Тут живёт ЛОГИКА (JavaScript)
-  import { ref, onMounted } from 'vue'
+    import {
+        ref,
+        onMounted,
+        computed
+    } from 'vue'
 
-  const lat = ref(0);
-  const lon = ref(0);
-  const city = ref('');
-  const state = ref('');
-  const country = ref('');
-  const errorMessage = ref('');
-  const countrys = ref([]);
-  const states = ref([]);
-  const cities = ref([]);
-  const displayCountry = ref('');  
-  const displayState = ref('');  
-  const displayCity = ref('');
-  const selectionMode = ref('');
-  const isLoading = ref(false);
-  const isErrorVisible = ref(false);
+    const lat = ref(0);
+    const lon = ref(0);
+    const city = ref('');
+    const state = ref('');
+    const country = ref('');
+    const errorMessage = ref('');
+    const countrys = ref([]);
+    const states = ref([]);
+    const cities = ref([]);
+    const displayCountry = ref('');
+    const displayState = ref('');
+    const displayCity = ref('');
+    const selectionMode = ref('');
+    const isAutoLoading = ref(false);
+    const isManualLoading = ref(false);
+    const isErrorVisible = ref(false);
+    const temp = ref(0);
+    const weatherDescription = ref('');
+    const weatherIcon = ref('');
+    const timezone = ref(0);
+    const lastSearchedLocation = ref('');
+    const isFormValid = computed(() => {
+        return country.value && state.value && city.value;
+    });
+
+    const hasLocation = computed(() => {
+        return lat.value !== 0 && lon.value !== 0;
+    });
+    const isFormChanged = computed(() => {
+        return lastSearchedLocation.value !== `${country.value}-${state.value}-${city.value}`;
+    });       
 
 
-  function success(position) {
-    lat.value = position.coords.latitude;
-    lon.value = position.coords.longitude;
-    isLoading.value = false;
-    getWeather();
-  }
+    function success(position) {
+        lat.value = position.coords.latitude;
+        lon.value = position.coords.longitude;
+        isAutoLoading.value = false;
+        getWeather();
+        fetchWeatherByCoords();
+    }
 
-  function error(err) {
-    isLoading.value = false;
-    isErrorVisible.value = true;
-    errorMessage.value = "Geolocation is unavailable. Please select manually or allow geolocation access";
-    console.warn(`ERROR(${err.code}): ${err.message}`);
-  }
+    function error(err) {
+        isAutoLoading.value = false;
+        isErrorVisible.value = true;
+        errorMessage.value = "Geolocation is unavailable";
+        console.warn(`ERROR(${err.code}): ${err.message}`);
+    }
 
-  function closeError() {
-    isErrorVisible.value = false;
-  }
+    function closeError() {
+        isErrorVisible.value = false;
+    }
 
-  var options = {
-    enableHighAccuracy: true,
-    timeout: 5000,
-    maximumAge: 0,
-  };
+    var options = {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0,
+    };
 
-  onMounted(() => {
-    getNames();
-  });
+    onMounted(() => {
+        isAutoLoading.value = true;
+        setTimeout(() => {
+            navigator.geolocation.getCurrentPosition(success, error, options);
+        }, 2000);
+        getNames();
+    });
 
     function getLocation() {
-    isLoading.value = true;
-    isErrorVisible.value = false; // На всякий случай скрываем старые ошибки
+        country.value = '';
+        state.value = '';
+        city.value = '';
 
-    // Задержка в 2 секунды (2000 мс)
-    setTimeout(() => {
-        navigator.geolocation.getCurrentPosition(success, error, options);
-    }, 2000); 
+        isAutoLoading.value = true;
+        isErrorVisible.value = false;
+
+        setTimeout(() => {
+            navigator.geolocation.getCurrentPosition(success, error, options);
+        }, 2000);
     }
 
-  async function getWeather() {
-    states.value = [];
-    cities.value = [];
-    country.value = '';
-    const API_KEY = '684a2a306db928a090319025e7b1a1e0';
-    const URL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat.value}&lon=${lon.value}&limit=1&appid=${API_KEY}`;
+    async function getWeather() {
+        const API_KEY = '684a2a306db928a090319025e7b1a1e0';
+        const URL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat.value}&lon=${lon.value}&limit=1&appid=${API_KEY}`;
 
-    const response = await fetch (URL);
-    const data = await response.json();
+        const response = await fetch(URL);
+        const data = await response.json();
 
-    if (data.length > 0) {
-      displayCity.value = data[0].name;
-      displayState.value = data[0].state;
-      displayCountry.value = data[0].country;
+        if (data.length > 0) {
+            displayCity.value = data[0].name;
+            displayState.value = data[0].state;
+            displayCountry.value = data[0].country;
+        } else {
+            displayCity.value = '—';
+            displayState.value = '—';
+            displayCountry.value = '—';
+        }
+
     }
-    else {
-        displayCity.value = '—';
-        displayState.value = '—';
-        displayCountry.value = '—';
+
+    async function handleManualSelection() {
+        isManualLoading.value = true;
+        const API_KEY = '684a2a306db928a090319025e7b1a1e0';
+        const URL = `https://api.openweathermap.org/geo/1.0/direct?q=${city.value},${state.value},${country.value}&limit=1&appid=${API_KEY}`;
+
+        try {
+            const response = await fetch(URL);
+            const data = await response.json();
+
+            if (data.length > 0) {
+                lat.value = data[0].lat;
+                lon.value = data[0].lon;
+                lastSearchedLocation.value = `${country.value}-${state.value}-${city.value}`;
+                selectionMode.value = "manual";
+                await fetchWeatherByCoords();
+            }
+        } catch (e) {
+            console.error("Manual selection error:", e);
+        } finally {
+            isManualLoading.value = false;
+        }
     }
-        
-  }
 
-  async function getNames() {
-    const URL = `https://countriesnow.space/api/v0.1/countries`;
+    async function fetchWeatherByCoords() {
+        const API_KEY = '684a2a306db928a090319025e7b1a1e0';
+        const URL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat.value}&lon=${lon.value}&appid=${API_KEY}&units=metric`;
 
-    const response = await fetch (URL);
-    const data = await response.json();
+        const response = await fetch(URL);
+        const data = await response.json();
 
-      if (data.data.length > 0) {
-      countrys.value = data.data;
+        if (data.main) {
+            temp.value = Math.round(data.main.temp);
+            weatherDescription.value = data.weather[0].description;
+            weatherIcon.value = data.weather[0].icon;
+            timezone.value = data.timezone;
+        }
     }
-  }
 
-  async function getStates() {
-    states.value = [];
-    cities.value = [];
-    state.value = '';
-    city.value = '';
+    async function getNames() {
+        const URL = `https://countriesnow.space/api/v0.1/countries`;
 
-    const URL = `https://countriesnow.space/api/v0.1/countries/states`;
+        const response = await fetch(URL);
+        const data = await response.json();
 
+        if (data.data.length > 0) {
+            countrys.value = data.data;
+        }
+    }
 
-    const response = await fetch (URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({country: country.value}),
-    });    
-    const data = await response.json();
+    async function getStates() {
+        states.value = [];
+        cities.value = [];
+        state.value = '';
+        city.value = '';
 
-      if (data.data.states.length > 0) {
-      states.value = data.data.states;
-      }
-      else { states.value = []; }
-  }
-
-  async function getCities() {
-
-    const URL = `https://countriesnow.space/api/v0.1/countries/state/cities`;
+        const URL = `https://countriesnow.space/api/v0.1/countries/states`;
 
 
-    const response = await fetch (URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({country: country.value, state: state.value}),
-    });    
-    const data = await response.json();
+        const response = await fetch(URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                country: country.value
+            }),
+        });
+        const data = await response.json();
 
-      if (data.data && data.data.length > 0) {
-        cities.value = data.data;
-      }
-      else {
-        cities.value = '—';
-      }
-  }   
+        if (data.data.states.length > 0) {
+            states.value = data.data.states;
+        } else {
+            states.value = [];
+        }
+    }
 
+    async function getCities() {
+
+        const URL = `https://countriesnow.space/api/v0.1/countries/state/cities`;
+
+
+        const response = await fetch(URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                country: country.value,
+                state: state.value
+            }),
+        });
+        const data = await response.json();
+
+        if (data.data && data.data.length > 0) {
+            cities.value = data.data;
+        } else {
+            cities.value = '—';
+        }
+    }
 </script>
 
 
@@ -144,80 +214,77 @@
         <div class="header">
             <h1 class="header_title">Weather forecast</h1>
         </div>
-        <div class="weather_container">
+        <div class="weather_container glass-container">
+            <div class="location">
+                <div class="data-group">
+                    <p class="city-text">Country: {{ displayCountry || '—' }}</p>
+                    <p class="city-text">State: {{ displayState || '—'}}</p>
+                    <p class="city-text">County: {{ displayCity || '—'}}</p>
+                </div>
+                <div class="buttons">
+                    <button @click="selectionMode = 'auto'; getLocation()">{{ isAutoLoading ? 'Detecting...' : 'Automatic' }}</button>
+                </div>
+            </div>
+            <div class="location-options">
+                <div class="data-group">
+                    <div class="options">
+                        <label for="country-select">Country</label>
+                        <select name="country" id="country-select" v-model="country" class="select-options" @change="getStates">
+                            <option value="">Select country...</option>
+                            <option v-for="countr in countrys" :value=countr.country>
+                                {{ countr.country }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="options">
+                        <label for="state-select">State</label>
+                        <select name="state" id="state-select" v-model="state" @change="getCities" class="select-options" :disabled="!country">
+                            <option value="">Select state...</option>
+                            <option v-for="st in states" :value="st.name">
+                                {{ st.name }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="options">
+                        <label for="county-select">County</label>
+                        <select name="county" id="county-select" v-model="city" class="select-options" :disabled="!country || !state">
+                            <option value="">Select county...</option>
+                            <option v-for="count in cities" :value="count">
+                                {{ count}}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div class="buttons">
+                    <button @click="handleManualSelection" :disabled="!isFormValid || (hasLocation && !isFormChanged)" >{{ isManualLoading ? 'Searching...' : 'Manual' }}</button>
+                </div>
+            </div>
+        </div>
 
-            <div class="weather_animation">
+        <div class="container-information glass-container ">
+            <div v-if="!hasLocation" class="empty-state">
+                <img src="./assets/images/biba.png" alt="Sad Sun" class="big-sad-sun" />
+                <p class="status-text">
+                    {{ isAutoLoading || isManualLoading ? 'Searching for light...' : errorMessage}}
+                </p>
             </div>
-            <div class="container-location">
-                <div class="location">
-                    <div class="data-group">
-                        <p class="city-text">Country: {{ displayCountry || '—' }}</p>
-                        <p class="city-text">State: {{ displayState || '—'}}</p>
-                        <p class="city-text">County: {{ displayCity || '—'}}</p>
-                    </div>
-                    <div class="buttons">
-                        <button @click="selectionMode = 'auto'; getLocation()">{{ isLoading ? 'Detecting...' : 'Automatic' }}</button>
-                    </div>
-                </div>
-                <div class="location-options">
-                    <div class="data-group">
-                        <div class="options">
-                            <label for="country-select">Country</label>
-                            <select name="country" id="country-select" v-model="country" class="select-options" @change="getStates" :disabled="selectionMode !== 'manual'">
-                                <option value="">Select country...</option>
-                                <option v-for="countr in countrys" :value=countr.country>
-                                    {{ countr.country }}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="options">
-                            <label for="state-select">State</label>
-                            <select name="state" id="state-select" v-model="state" @change="getCities" class="select-options" :disabled="!country">
-                                <option value="">Select state...</option>
-                                <option v-for="st in states" :value="st.name">
-                                    {{ st.name }}
-                                </option>
-                            </select>
-                        </div>                      
-                        <div class="options">
-                            <label for="county-select">County</label>
-                            <select name="county" id="county-select" v-model="city" class="select-options" :disabled="!country || !state">
-                                <option value="">Select county...</option>
-                                <option v-for="count in cities" :value="count">
-                                    {{ count}}
-                                </option>
-                            </select>
-                        </div>                      
-                    </div>
-                    <div class="buttons">
-                        <button @click="selectionMode = 'manual'">Manual</button>
-                    </div>                    
-                </div>
-            </div>
-            <div class="timezone">
+            <div v-else class="weather-info">
+                <p v-if="temp" class="weather-temp">{{ temp }}°C</p>
+                <p class="weather-desc">{{ weatherDescription }}</p>
+                <p v-if="timezone" class="weather-timezone">Timezone: UTC {{ timezone > 0 ? '+' : '' }}{{ timezone / 3600 }}h / {{ timezone > 0 ? '+' : '' }}{{ timezone}}s</p>
             </div>
         </div>
         <div class="footer">
-          <p>The page will remain sad and gray if you don't choose your city</p>
+            <p>The site was created in order to be created</p>
         </div>
     </div>
-    <div v-if="isErrorVisible">
-        <div class="window-overlay" @click="closeError"></div>
-        <div class="window-modal">
-            {{ errorMessage }}
-            <span @click="closeError" class="button-cross">&times;</span>
-        </div>        
-    </div>
-
 </template>
 
 
 
-
-
+ 
 
 <style scoped>
-
     .page {
         min-inline-size: 320px;
         min-block-size: 100dvb;
@@ -229,12 +296,17 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        align-items: center;
         font-size: 18px;
+    }
+
+
+    .big-sad-sun {
+        width: 175px;
     }
 
     .header {
         text-align: center;
-        margin-bottom: 15px;
         margin-top: 15px;
     }
 
@@ -243,10 +315,29 @@
     }
 
     .weather_container {
+        display: flex;
         max-inline-size: 900px;
         justify-content: center;
         align-self: center;
+        padding: 15px;
     }
+
+    .glass-container {
+        /* Прозрачный фон */
+        background: rgba(255, 255, 255, 0.1); 
+        
+        /* Эффект стекла (обязательно с -webkit для Safari/iOS) */
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        backdrop-filter: blur(20px) saturate(180%);
+        
+
+        
+        /* Тонкая грань */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        
+        /* Мягкая тень для глубины */
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }    
 
     .container-location {
         display: flex;
@@ -351,46 +442,47 @@
         margin-top: 15px;
     }
 
-    .window-overlay {
-        position: fixed;
-        top: 0; right: 0; left: 0; bottom: 0;
-        background-color: rgba(255, 255, 255, 0.5);
-    }
-
     .window-modal {
         position: fixed;
         text-wrap: wrap;
         text-align: center;
         max-width: 450px;
-        line-height: 14px;
+        line-height: 17px;
+        font-family: 'PressStart2P', sans-serif;
+        font-size: 10px;        
 
-        top: 50%; left: 50%;
+        top: 70%; left: 50%;
         transform: translate(-50%, -50%);
         z-index: 101;
-        color: rgb(240, 43, 43);
-        background-color: white;
-        font-family: 'PressStart2P', sans-serif;
-        font-size: 9px;
-        padding: 10px;
-        box-shadow:
-            -2px 0 0 0 rgba(255, 255, 255, 0.7),
-            2px 0 0 0 rgba(255, 255, 255, 0.7),
-            0 -2px 0 0 rgba(255, 255, 255, 0.7),
-            0 2px 0 0 rgba(255, 255, 255, 0.7);        
-    }
-
-    .button-cross {
-        cursor: pointer;
-        position: absolute;
-        top: 0; right: 0;
-        color: grey;
-        font-size: 13px;
-    }
-
-    .button-cross:hover {
-        color: rgb(240, 43, 43);
-        transform: scale(1.2);
+        color: #fff;     
     }    
 
+    .weather-info, .empty-state {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        min-height: 300px;
+        padding-top: 50px;
+        padding-bottom: 50px;
+    }
+
+    .container-information {
+        min-height: 300px;
+        min-inline-size: 732px;
+        max-inline-size: 900px;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    .weather-temp {
+        font-size: 90px;
+        font-family: 'PressStart2P', sans-serif;
+    }
+
+    .weather-desc, .weather-timezone, .status-text {
+        font-family: 'PressStart2P', sans-serif;
+        font-size: 15px;
+    }    
 </style>
 
