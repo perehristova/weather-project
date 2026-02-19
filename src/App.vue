@@ -483,6 +483,48 @@
     .weather-desc, .weather-timezone, .status-text {
         font-family: 'PressStart2P', sans-serif;
         font-size: 15px;
-    }    
+    }
+
+@media (max-width: 768px) {
+    /* Главное: меняем ряд на колонку и убираем жесткую ширину */
+    .weather_container {
+        flex-direction: column; 
+        align-items: center;
+        width: 90%;            /* Занимаем 90% экрана */
+        min-inline-size: 0;    /* Сбрасываем старое значение */
+        margin: 0 auto;        /* Центрируем */
+    }
+
+    .location, .location-options {
+        min-inline-size: 0;    /* Убираем 350px, которые все ломали */
+        width: 100%;           /* Теперь блок тянется по родителю */
+    }
+    
+    .container-information {
+        width: 90%;
+        min-inline-size: 0;    /* Убираем 732px, которые выталкивали блок за экран */
+        margin: 20px auto;
+    }
+
+    .header {
+        margin-top: 15px;
+        margin-bottom: 15px; /* Тот самый воздух между заголовком и кнопками */
+    }
+    
+    .header_title {
+        font-size: 16px; /* Чуть меньше, чтобы не в два ряда */
+    }
+
+    .options {
+        flex-direction: column; /* Текст над селектом */
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .select-options {
+        max-width: 100%; /* Растягиваем на всю ширину блока */
+        width: 100%;
+    }
+}
 </style>
 
