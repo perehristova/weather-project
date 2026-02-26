@@ -35,6 +35,7 @@
     'broken clouds': 'cloudy-bg.png',
     'few clouds': 'cloudy-bg.png',
     'light rain': 'rainy-bg.png',
+    'light snow': 'snow-bg.png',
     'default': 'main-picture.png'
     };
 
