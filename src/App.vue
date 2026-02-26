@@ -36,6 +36,7 @@
     'few clouds': 'cloudy-bg.png',
     'light rain': 'rainy-bg.png',
     'light snow': 'snow-bg.png',
+    'mist': 'mist-bg.png',    
     'default': 'main-picture.png'
     };
 
@@ -134,7 +135,9 @@
 
     async function handleManualSelection() {
         errorMessage.value = '';
+        resetWeatherData();
         isManualLoading.value = true;
+
         const URL = `https://api.openweathermap.org/geo/1.0/direct?q=${city.value},${state.value},${country.value}&limit=1&appid=${API_KEY}`;
 
         try {
@@ -148,15 +151,28 @@
                 selectionMode.value = "manual";
                 await fetchWeatherByCoords();
             }
+            else {
+                throw new Error("Location not found");
+            }
         } catch (e) {
-            console.error("Manual selection error:", e);
+            errorMessage.value = "Can't find this location. Try again.";
+            resetWeatherData();
         } finally {
             isManualLoading.value = false;
         }
     }
 
+    function resetWeatherData() {
+        temp.value = 0;
+        weatherDescription.value = 'default';
+        weatherIcon.value = '';
+        timezone.value = 0;
+    }
+
     async function fetchWeatherByCoords() {
         const URL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat.value}&lon=${lon.value}&appid=${API_KEY}&units=metric`;
+        resetWeatherData();
+        errorMessage.value = '';
 
         try {
             const response = await fetch(URL);
@@ -175,6 +191,7 @@
             console.error("Weather fetch error:", e);
             errorMessage.value = "Failed to load weather. Check connection."; 
             temp.value = 0;
+            resetWeatherData();
         }
 
     }
@@ -315,7 +332,7 @@
             </div>
         </div>
         <div class="container-information glass-container ">
-            <div v-if="!hasLocation || isLoading" class="empty-state">
+            <div v-if="!hasLocation || isLoading || errorMessage" class="empty-state">
                 <div v-if="isLoading" class="loader"></div>
                 <img v-if="errorMessage && !isLoading" src="./assets/images/sad-cloud.png" alt="Sad Cloud" class="big-sad-cloud" />
                 <p class="status-text">
@@ -350,7 +367,7 @@
         justify-content: space-between;
         align-items: center;
         font-size: 18px;
-        transition: background-image 0.5s ease-in-out;
+        transition: background-image 0.8s ease-in-out;
     }
 
 
