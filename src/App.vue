@@ -1,10 +1,11 @@
 <script setup>
-  // Тут живёт ЛОГИКА (JavaScript)
     import {
         ref,
         onMounted,
         computed
     } from 'vue'
+
+    const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
 
     const lat = ref(0);
     const lon = ref(0);
@@ -12,7 +13,7 @@
     const state = ref('');
     const country = ref('');
     const errorMessage = ref('');
-    const countrys = ref([]);
+    const countries = ref([]);
     const states = ref([]);
     const cities = ref([]);
     const displayCountry = ref('');
@@ -27,6 +28,22 @@
     const weatherIcon = ref('');
     const timezone = ref(0);
     const lastSearchedLocation = ref('');
+    const weatherBackgrounds = {
+    'clear sky': 'sunny-bg.png',
+    'overcast clouds': 'cloudy-bg.png',
+    'scattered clouds': 'cloudy-bg.png',
+    'broken clouds': 'cloudy-bg.png',
+    'few clouds': 'cloudy-bg.png',
+    'light rain': 'rainy-bg.png',
+    'default': 'main-picture.png'
+    };
+
+    const currentBackground = computed(() => {
+        const description = weatherDescription.value.toLowerCase();
+        const imageName = weatherBackgrounds[description] || weatherBackgrounds['default'];
+        return `url(${new URL(`./assets/images/${imageName}`, import.meta.url).href})`;
+    });
+
     const isFormValid = computed(() => {
         return country.value && state.value && city.value;
     });
@@ -36,7 +53,8 @@
     });
     const isFormChanged = computed(() => {
         return lastSearchedLocation.value !== `${country.value}-${state.value}-${city.value}`;
-    });       
+    });
+    const isLoading = computed(() => isAutoLoading.value || isManualLoading.value);
 
 
     function success(position) {
@@ -58,7 +76,7 @@
         isErrorVisible.value = false;
     }
 
-    var options = {
+    const options = {
         enableHighAccuracy: true,
         timeout: 5000,
         maximumAge: 0,
@@ -73,6 +91,7 @@
     });
 
     function getLocation() {
+        errorMessage.value = '';
         country.value = '';
         state.value = '';
         city.value = '';
@@ -86,27 +105,35 @@
     }
 
     async function getWeather() {
-        const API_KEY = '684a2a306db928a090319025e7b1a1e0';
         const URL = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat.value}&lon=${lon.value}&limit=1&appid=${API_KEY}`;
 
-        const response = await fetch(URL);
-        const data = await response.json();
+        try {
+            const response = await fetch(URL);
+            if (!response.ok) throw new Error("Server error");
+            const data = await response.json();
 
-        if (data.length > 0) {
-            displayCity.value = data[0].name;
-            displayState.value = data[0].state;
-            displayCountry.value = data[0].country;
-        } else {
-            displayCity.value = '—';
-            displayState.value = '—';
-            displayCountry.value = '—';
+            if (data.length > 0) {
+                displayCity.value = data[0].name;
+                displayState.value = data[0].state;
+                displayCountry.value = data[0].country;
+            } else {
+                displayCity.value = '—';
+                displayState.value = '—';
+                displayCountry.value = '—';
+            }
         }
+        
+        catch (e){
+            console.error("Reverse geocoding error:", e);
+            displayCity.value = '—'; displayState.value = '—'; displayCountry.value = '—';
+        }
+
 
     }
 
     async function handleManualSelection() {
+        errorMessage.value = '';
         isManualLoading.value = true;
-        const API_KEY = '684a2a306db928a090319025e7b1a1e0';
         const URL = `https://api.openweathermap.org/geo/1.0/direct?q=${city.value},${state.value},${country.value}&limit=1&appid=${API_KEY}`;
 
         try {
@@ -128,28 +155,43 @@
     }
 
     async function fetchWeatherByCoords() {
-        const API_KEY = '684a2a306db928a090319025e7b1a1e0';
         const URL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat.value}&lon=${lon.value}&appid=${API_KEY}&units=metric`;
 
-        const response = await fetch(URL);
-        const data = await response.json();
+        try {
+            const response = await fetch(URL);
+            if (!response.ok) throw new Error("Weather data not found");
+            const data = await response.json();
 
-        if (data.main) {
-            temp.value = Math.round(data.main.temp);
-            weatherDescription.value = data.weather[0].description;
-            weatherIcon.value = data.weather[0].icon;
-            timezone.value = data.timezone;
+            if (data.main) {
+                temp.value = Math.round(data.main.temp);
+                weatherDescription.value = data.weather[0].description;
+                weatherIcon.value = data.weather[0].icon;
+                timezone.value = data.timezone;
+            }
         }
+
+        catch (e) {
+            console.error("Weather fetch error:", e);
+            errorMessage.value = "Failed to load weather. Check connection."; 
+            temp.value = 0;
+        }
+
     }
 
     async function getNames() {
         const URL = `https://countriesnow.space/api/v0.1/countries`;
 
-        const response = await fetch(URL);
-        const data = await response.json();
+        try {
+            const response = await fetch(URL);
+            if (!response.ok) throw new Error("Failed to load countries");
+            const data = await response.json();
 
-        if (data.data.length > 0) {
-            countrys.value = data.data;
+            if (data.data.length > 0) {
+                countries.value = data.data;
+            }
+        }
+        catch (e) {
+            console.error("API Error (Countries):", e);
         }
     }
 
@@ -161,46 +203,57 @@
 
         const URL = `https://countriesnow.space/api/v0.1/countries/states`;
 
+        try {
+            const response = await fetch(URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    country: country.value
+                }),
+            });
+            const data = await response.json();
 
-        const response = await fetch(URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                country: country.value
-            }),
-        });
-        const data = await response.json();
-
-        if (data.data.states.length > 0) {
-            states.value = data.data.states;
-        } else {
-            states.value = [];
+            if (data.data.states.length > 0) {
+                states.value = data.data.states;
+            } else {
+                states.value = [];
+            }
         }
+
+        catch (e) {
+                console.error("API Error (States):", e);
+        }        
     }
 
     async function getCities() {
 
         const URL = `https://countriesnow.space/api/v0.1/countries/state/cities`;
 
+        try {
+            const response = await fetch(URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    country: country.value,
+                    state: state.value
+                }),
+            });
+            const data = await response.json();
 
-        const response = await fetch(URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                country: country.value,
-                state: state.value
-            }),
-        });
-        const data = await response.json();
+            if (data.data && data.data.length > 0) {
+                cities.value = data.data;
+            } else {
+                cities.value = '—';
+            }
+        }
 
-        if (data.data && data.data.length > 0) {
-            cities.value = data.data;
-        } else {
-            cities.value = '—';
+        catch (e) {
+            console.error("API Error (Cities):", e);
+            cities.value = [];
         }
     }
 </script>
@@ -210,7 +263,7 @@
 
 
 <template>
-    <div class="page">
+    <div class="page" :style="{ backgroundImage:currentBackground}">
         <div class="header">
             <h1 class="header_title">Weather forecast</h1>
         </div>
@@ -231,7 +284,7 @@
                         <label for="country-select">Country</label>
                         <select name="country" id="country-select" v-model="country" class="select-options" @change="getStates">
                             <option value="">Select country...</option>
-                            <option v-for="countr in countrys" :value=countr.country>
+                            <option v-for="countr in countries" :key="countr.country" :value=countr.country>
                                 {{ countr.country }}
                             </option>
                         </select>
@@ -240,7 +293,7 @@
                         <label for="state-select">State</label>
                         <select name="state" id="state-select" v-model="state" @change="getCities" class="select-options" :disabled="!country">
                             <option value="">Select state...</option>
-                            <option v-for="st in states" :value="st.name">
+                            <option v-for="st in states" :key="st.name" :value="st.name">
                                 {{ st.name }}
                             </option>
                         </select>
@@ -249,23 +302,23 @@
                         <label for="county-select">County</label>
                         <select name="county" id="county-select" v-model="city" class="select-options" :disabled="!country || !state">
                             <option value="">Select county...</option>
-                            <option v-for="count in cities" :value="count">
-                                {{ count}}
+                            <option v-for="cityItem in cities" :key="cityItem" :value="cityItem">
+                                {{ cityItem}}
                             </option>
                         </select>
                     </div>
                 </div>
                 <div class="buttons">
-                    <button @click="handleManualSelection" :disabled="!isFormValid || (hasLocation && !isFormChanged)" >{{ isManualLoading ? 'Searching...' : 'Manual' }}</button>
+                    <button @click="handleManualSelection" :disabled="!isFormValid || (hasLocation && !isFormChanged)">{{ isManualLoading ? 'Searching...' : 'Manual' }}</button>
                 </div>
             </div>
         </div>
-
         <div class="container-information glass-container ">
-            <div v-if="!hasLocation" class="empty-state">
-                <img src="./assets/images/sad-cloud.png" alt="Sad Cloud" class="big-sad-cloud" />
+            <div v-if="!hasLocation || isLoading" class="empty-state">
+                <div v-if="isLoading" class="loader"></div>
+                <img v-if="errorMessage && !isLoading" src="./assets/images/sad-cloud.png" alt="Sad Cloud" class="big-sad-cloud" />
                 <p class="status-text">
-                    {{ isAutoLoading || isManualLoading ? 'Searching for light...' : errorMessage}}
+                    {{ isLoading ? 'Searching for light...' : (errorMessage || 'Searching for light...') }}
                 </p>
             </div>
             <div v-else class="weather-info">
@@ -288,16 +341,15 @@
     .page {
         min-inline-size: 320px;
         min-block-size: 100dvb;
-        background-image: url('./assets/images/main-picture.png');
         background-repeat: no-repeat;
         background-attachment: fixed;
         background-size: cover;
-        background-position: center;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         align-items: center;
         font-size: 18px;
+        transition: background-image 0.5s ease-in-out;
     }
 
 
@@ -323,19 +375,10 @@
     }
 
     .glass-container {
-        /* Прозрачный фон */
         background: rgba(255, 255, 255, 0.1); 
-        
-        /* Эффект стекла (обязательно с -webkit для Safari/iOS) */
         -webkit-backdrop-filter: blur(20px) saturate(180%);
         backdrop-filter: blur(20px) saturate(180%);
-        
-
-        
-        /* Тонкая грань */
         border: 1px solid rgba(255, 255, 255, 0.1);
-        
-        /* Мягкая тень для глубины */
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     }    
 
@@ -440,22 +483,7 @@
         font-size: 7px;
         margin-bottom: 15px;
         margin-top: 15px;
-    }
-
-    .window-modal {
-        position: fixed;
-        text-wrap: wrap;
-        text-align: center;
-        max-width: 450px;
-        line-height: 17px;
-        font-family: 'PressStart2P', sans-serif;
-        font-size: 10px;        
-
-        top: 70%; left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 101;
-        color: #fff;     
-    }    
+    }   
 
     .weather-info, .empty-state {
         display: flex;
@@ -485,44 +513,48 @@
         font-size: 15px;
     }
 
+    .empty-state {
+        justify-content: center;
+
+    }    
+
 @media (max-width: 768px) {
-    /* Главное: меняем ряд на колонку и убираем жесткую ширину */
     .weather_container {
         flex-direction: column; 
         align-items: center;
-        width: 90%;            /* Занимаем 90% экрана */
-        min-inline-size: 0;    /* Сбрасываем старое значение */
-        margin: 0 auto;        /* Центрируем */
+        width: 90%;
+        min-inline-size: 0;
+        margin: 0 auto;
     }
 
     .location, .location-options {
-        min-inline-size: 0;    /* Убираем 350px, которые все ломали */
-        width: 100%;           /* Теперь блок тянется по родителю */
+        min-inline-size: 0;
+        width: 100%;
     }
     
     .container-information {
         width: 90%;
-        min-inline-size: 0;    /* Убираем 732px, которые выталкивали блок за экран */
+        min-inline-size: 0;
         margin: 20px auto;
     }
 
     .header {
         margin-top: 15px;
-        margin-bottom: 15px; /* Тот самый воздух между заголовком и кнопками */
+        margin-bottom: 15px;
     }
     
     .header_title {
-        font-size: 16px; /* Чуть меньше, чтобы не в два ряда */
+        font-size: 16px;
     }
 
     .options {
-        flex-direction: column; /* Текст над селектом */
+        flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
 
     .select-options {
-        max-width: 100%; /* Растягиваем на всю ширину блока */
+        max-width: 100%;
         width: 100%;
     }
 
