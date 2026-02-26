@@ -533,8 +533,13 @@
 
     .empty-state {
         justify-content: center;
-
-    }    
+        text-align: center;
+    }
+    
+    .status-text {
+        display: flex;
+        justify-content: center;
+    }
 
 @media (max-width: 768px) {
     .weather_container {
@@ -583,6 +588,8 @@
     .weather-desc, .weather-timezone, .status-text {
         font-size: 11px;
     }
+
+
 }
 </style>
 
