@@ -164,7 +164,7 @@
 
     function resetWeatherData() {
         temp.value = 0;
-        weatherDescription.value = 'default';
+        weatherDescription.value = '';
         weatherIcon.value = '';
         timezone.value = 0;
     }
