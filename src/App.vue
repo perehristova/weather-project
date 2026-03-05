@@ -1,185 +1,25 @@
 <script setup>
-    import {
-        ref,
-        onMounted,
-        computed
-    } from 'vue';
+import { computed } from 'vue';
+import { useWeatherStore } from './stores/weatherStore';
+import { weatherBackgrounds } from './services/config.js';
+import AppHeader from './components/AppHeader.vue';
+import AppFooter from './components/AppFooter.vue';
 
-    import { 
-        getLocationName,
-        getWeatherStats,
-        getNameOfLocation
-    } from './services/api.js';
+const weatherStore = useWeatherStore();
 
-    import {
-        API_KEY,
-        weatherBackgrounds
-    } from './services/config.js';
-
-    import
-        LocationSelector 
-    from './components/LocationSelector.vue';
-
-    import
-        CurrentLocation 
-    from './components/CurrentLocation.vue';
-
-    import
-        WeatherDisplay 
-    from './components/WeatherDisplay.vue';    
-
-    import { 
-        useWeatherStore 
-    } from './stores/weatherStore';
-
-    import
-        AppHeader 
-    from './components/AppHeader.vue';
-
-    import
-        AppFooter
-    from './components/AppFooter.vue';    
-
-    const weatherStore = useWeatherStore();    
-    const errorMessage = ref('');
-    const isAutoLoading = ref(false);
-    const isManualLoading = ref(false);
-    const isErrorVisible = ref(false);
-
-    const currentBackground = computed(() => {
-        const description = weatherStore.weatherDescription.toLowerCase();
-        const imageName = weatherBackgrounds[description] || weatherBackgrounds['default'];
-        return `url(${new URL(`./assets/images/${imageName}`, import.meta.url).href})`;
-    });
-
-    const isLoading = computed(() => isAutoLoading.value || isManualLoading.value);
-
-    function success(position) {
-        weatherStore.lat = position.coords.latitude;
-        weatherStore.lon = position.coords.longitude;
-        isAutoLoading.value = false;
-        getWeather();
-        fetchWeatherByCoords();
-    }
-
-    function error(err) {
-        isAutoLoading.value = false;
-        isErrorVisible.value = true;
-        errorMessage.value = "Geolocation is unavailable";
-        console.warn(`ERROR(${err.code}): ${err.message}`);
-    }
-
-    const options = {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-    };
-
-    onMounted(() => {
-        isAutoLoading.value = true;
-        navigator.geolocation.getCurrentPosition(success, error, options);
-    });
-
-    function getLocation() {
-        errorMessage.value = '';
-        isAutoLoading.value = true;
-        isErrorVisible.value = false;
-        navigator.geolocation.getCurrentPosition(success, error, options);
-    }
-
-    async function getWeather() {
-        try {
-            const data = await getLocationName(weatherStore.lat, weatherStore.lon);
-
-            if (data.length > 0) {
-                weatherStore.displayCity = data[0].name;
-                weatherStore.displayState = data[0].state;
-                weatherStore.displayCountry = data[0].country;
-            }
-        } catch (e){
-            console.error("Geocoding error:", e);
-        }
-    }
-
-    async function handleManualSelection(locationData) {
-        errorMessage.value = '';
-        resetWeatherData();
-        isManualLoading.value = true;
-
-        try {
-            const data = await getNameOfLocation(locationData.city, locationData.state, locationData.country);
-
-            if (data.length > 0) {
-                weatherStore.lat = data[0].lat;
-                weatherStore.lon = data[0].lon;
-                await fetchWeatherByCoords();
-            }
-            else {
-                throw new Error("Location not found");
-            }
-        } catch (e) {
-            errorMessage.value = "Can't find this location. Try again.";
-            resetWeatherData();
-        } finally {
-            isManualLoading.value = false;
-        }
-    }
-
-    function resetWeatherData() {
-        weatherStore.temp = 0;
-        weatherStore.weatherDescription = '';
-        weatherStore.timezone = 0;
-    }
-
-    async function fetchWeatherByCoords() {
-        resetWeatherData();
-        errorMessage.value = '';
-
-        try {
-            const data = await getWeatherStats(weatherStore.lat, weatherStore.lon);
-
-            if (data.main) {
-                weatherStore.temp = Math.round(data.main.temp);
-                weatherStore.weatherDescription = data.weather[0].description;
-                weatherStore.timezone = data.timezone;
-            }
-        }
-
-        catch (e) {
-            console.error("Weather fetch error:", e);
-            errorMessage.value = "Failed to load weather. Check connection."; 
-            weatherStore.temp = 0;
-            resetWeatherData();
-        }
-
-    }
+const currentBackground = computed(() => {
+    const description = (weatherStore.weatherDescription || 'default').toLowerCase();
+    const imageName = weatherBackgrounds[description] || weatherBackgrounds['default'];
+    return `url(${new URL(`./assets/images/${imageName}`, import.meta.url).href})`;
+});
 </script>
 
 <template>
-    <div class="page" :style="{ backgroundImage:currentBackground}">
-
-        <AppHeader />
-
-        <div class="weather_container glass-container">
-
-            <CurrentLocation 
-                :isLoading="isAutoLoading" 
-                @request-location="getLocation" 
-            />
-
-            <LocationSelector 
-                :isLoading="isManualLoading" 
-                @location-changed="handleManualSelection" 
-            />
-        </div>
-
-        <WeatherDisplay
-        :isLoading="isLoading" 
-        :errorMessage="errorMessage" 
-        />
-
-        <AppFooter />
-    </div>
+  <div class="page" :style="{ backgroundImage: currentBackground }">
+    <AppHeader />
+    <router-view /> 
+    <AppFooter />
+  </div>
 </template>
 
 <style scoped>
@@ -227,4 +67,3 @@
         }
     }
 </style>
-
