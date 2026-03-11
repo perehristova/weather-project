@@ -1,7 +1,7 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { useWeatherStore } from './stores/weatherStore';
-import { weatherBackgrounds } from './services/config.js';
+import { weatherBackgrounds } from './services/config';
 import AppHeader from './components/AppHeader.vue';
 import AppFooter from './components/AppFooter.vue';
 

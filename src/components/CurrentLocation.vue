@@ -1,11 +1,15 @@
-<script setup>
+<script setup lang="ts">
     import { useWeatherStore } from '../stores/weatherStore';
     import  BaseButton  from './BaseButton.vue';
 
-    defineProps({
-        isLoading: Boolean
-    });
-    const emit = defineEmits(['request-location']);
+    defineProps<{
+        isLoading: boolean
+    }>();
+
+    const emit = defineEmits<{
+        (e: 'request-location'): void
+    }>();
+
     const weatherStore = useWeatherStore();
 </script>
 
@@ -43,7 +47,7 @@
         display: flex;
         align-items: center;
     }
-    
+
     .buttons {
         display: flex;
         justify-content: center;

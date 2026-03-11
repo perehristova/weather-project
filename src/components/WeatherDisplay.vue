@@ -1,12 +1,13 @@
-<script setup>
+<script setup lang="ts">
     import { useWeatherStore } from '../stores/weatherStore';
     import { computed } from 'vue';
+
+    interface Props {
+        isLoading: boolean;
+        errorMessage?: string;
+    }
     
-    const props = defineProps({
-        isLoading: Boolean,
-        errorMessage: String
-    });
-    
+    const props = defineProps<Props>();
     const weatherStore = useWeatherStore(); 
     const hasLocation = computed(() => {
         return weatherStore.lat !== 0 && weatherStore.lon !== 0;

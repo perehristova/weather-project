@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
     import {
         ref,
         onMounted,
@@ -9,22 +9,25 @@
         fetchCountries,
         fetchStates,
         fetchCities
-    } from '../services/api.js';
+    } from '../services/api';
 
     import  BaseButton  from './BaseButton.vue';
+    import type { LocationData } from '../services/types';
 
-    const city = ref('');
-    const state = ref('');
-    const country = ref('');
-    const countries = ref([]);
-    const states = ref([]);
-    const cities = ref([]);
+    const city = ref<string>('');
+    const state = ref<string>('');
+    const country = ref<string>('');
+    const countries = ref<any[]>([]);
+    const states = ref<any[]>([]);
+    const cities = ref<any[]>([]);
 
     const isFormValid = computed(() => {
         return country.value && state.value && city.value;
     });    
 
-    const emit = defineEmits(['location-changed']);
+    const emit = defineEmits<{
+         (e: 'location-changed', data: { city: string, state: string, country: string }): void
+    }>();
     const props = defineProps({
         isLoading: Boolean
     });

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
     import {
         ref,
         onMounted,
@@ -9,12 +9,7 @@
         getLocationName,
         getWeatherStats,
         getNameOfLocation
-    } from '../services/api.js';
-
-    import {
-        API_KEY,
-        weatherBackgrounds
-    } from '../services/config.js';
+    } from '../services/api';
 
     import
         LocationSelector 
@@ -32,54 +27,63 @@
         useWeatherStore 
     } from '../stores/weatherStore';
 
+    interface SelectedLocation {
+        city: string;
+        state: string;
+        country: string;
+    }
+
     const weatherStore = useWeatherStore();    
     const errorMessage = ref('');
     const isAutoLoading = ref(false);
     const isManualLoading = ref(false);
-    const isErrorVisible = ref(false);
 
     const isLoading = computed(() => isAutoLoading.value || isManualLoading.value);
 
-    function success(position) {
+    async function success(position: GeolocationPosition) {
         weatherStore.lat = position.coords.latitude;
         weatherStore.lon = position.coords.longitude;
-        isAutoLoading.value = false;
-        getWeather();
-        fetchWeatherByCoords();
+        
+        // Запускаем оба запроса параллельно для скорости
+        try {
+            await Promise.all([
+                getWeatherName(),
+                fetchWeatherByCoords()
+            ]);
+        } finally {
+            isAutoLoading.value = false;
+        }
     }
 
-    function error(err) {
+    function error(err: GeolocationPositionError) {
         isAutoLoading.value = false;
-        isErrorVisible.value = true;
         errorMessage.value = "Geolocation is unavailable";
         console.warn(`ERROR(${err.code}): ${err.message}`);
     }
 
-    const options = {
+    const geoOptions = {
         enableHighAccuracy: true,
         timeout: 5000,
         maximumAge: 0,
     };
 
     onMounted(() => {
-        isAutoLoading.value = true;
-        navigator.geolocation.getCurrentPosition(success, error, options);
+        getLocation();
     });
 
     function getLocation() {
         errorMessage.value = '';
         isAutoLoading.value = true;
-        isErrorVisible.value = false;
-        navigator.geolocation.getCurrentPosition(success, error, options);
+        navigator.geolocation.getCurrentPosition(success, error, geoOptions);
     }
 
-    async function getWeather() {
+    async function getWeatherName() {
         try {
             const data = await getLocationName(weatherStore.lat, weatherStore.lon);
 
             if (data.length > 0) {
                 weatherStore.displayCity = data[0].name;
-                weatherStore.displayState = data[0].state;
+                weatherStore.displayState = data[0].state || '';
                 weatherStore.displayCountry = data[0].country;
             }
         } catch (e){
@@ -87,9 +91,9 @@
         }
     }
 
-    async function handleManualSelection(locationData) {
+    async function handleManualSelection(locationData: SelectedLocation) {
         errorMessage.value = '';
-        resetWeatherData();
+        weatherStore.resetWeather();
         isManualLoading.value = true;
 
         try {
@@ -105,20 +109,14 @@
             }
         } catch (e) {
             errorMessage.value = "Can't find this location. Try again.";
-            resetWeatherData();
+            weatherStore.resetWeather();
         } finally {
             isManualLoading.value = false;
         }
     }
 
-    function resetWeatherData() {
-        weatherStore.temp = 0;
-        weatherStore.weatherDescription = '';
-        weatherStore.timezone = 0;
-    }
-
     async function fetchWeatherByCoords() {
-        resetWeatherData();
+        weatherStore.resetWeather();
         errorMessage.value = '';
 
         try {
@@ -135,7 +133,7 @@
             console.error("Weather fetch error:", e);
             errorMessage.value = "Failed to load weather. Check connection."; 
             weatherStore.temp = 0;
-            resetWeatherData();
+            weatherStore.resetWeather();
         }
 
     }

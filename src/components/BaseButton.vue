@@ -1,13 +1,17 @@
-<script setup>
-    defineProps({
-      label: String,
-      loading: Boolean,
-      disabled: Boolean,
-      type: {
-        type: String,
-        default: 'button'
-      }
-    });
+<script setup lang="ts">
+interface Props {
+  label?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
+}
+
+withDefaults(defineProps<Props>(), {
+  label: '',
+  loading: false,
+  disabled: false,
+  type: 'button'
+});
 </script>
 
 <template>
