@@ -17,11 +17,22 @@ A minimalist and stylish weather forecasting application featuring a retro-pixel
 ## 🛠️ Tech Stack
 
 * **Framework:** Vue 3 (Composition API)
+* **Language:** TypeScript 🚀
+* **State Management:** Pinia
 * **Build Tool:** Vite
 * **APIs:**
     * [OpenWeatherMap API](https://openweathermap.org/) — Real-time weather data and geocoding.
     * [CountriesNow API](https://countriesnow.space/) — Comprehensive global location database.
 * **Deployment:** GitHub Actions & GitHub Pages
+
+## 🏗️ Architecture & Type Safety
+
+The project has been fully migrated to **TypeScript** to ensure a robust and error-free development experience:
+
+* **Centralized State:** Managed via **Pinia** with strict typing for weather data, coordinates, and location history.
+* **Dynamic Background Logic:** Implemented using TypeScript `Record` types to safely map API weather descriptions to specific pixel-art assets.
+* **Component Communication:** All props and custom events are strictly typed using Vue 3 `<script setup lang="ts">` interfaces.
+* **Global Components:** Custom TypeScript configuration (`tsconfig.json` & `env.d.ts`) for seamless integration with **Vue Router**.
 
 ## 🚀 Getting Started
 
